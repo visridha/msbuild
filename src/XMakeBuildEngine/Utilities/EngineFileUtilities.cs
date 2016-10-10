@@ -5,12 +5,20 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.Build.Shared;
 
 namespace Microsoft.Build.Internal
 {
     internal class EngineFileUtilities
     {
+        public static readonly bool s_msbuildEagerWildCardEvaluation =
+               !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MsBuildSkipEagerWildCarddEvaluationRegexes"));
+
+        // by default no wildcards are supported.
+        private static List<Regex> s_wildCardSupportedRegexes = PopulateRegexFromEnvironment();
+
         /// <summary>
         /// Used for the purposes of evaluating an item specification. Given a filespec that may include wildcard characters * and
         /// ?, we translate it into an actual list of files. If the input filespec doesn't contain any wildcard characters, and it
@@ -27,11 +35,12 @@ namespace Microsoft.Build.Internal
         internal static string[] GetFileListUnescaped
             (
             string directoryEscaped,
-            string filespecEscaped
+            string filespecEscaped,
+            bool forceEvaluate = false
             )
 
         {
-            return GetFileList(directoryEscaped, filespecEscaped, false /* returnEscaped */);
+            return GetFileList(directoryEscaped, filespecEscaped, false /* returnEscaped */, forceEvaluate);
         }
 
         /// <summary>
@@ -50,10 +59,11 @@ namespace Microsoft.Build.Internal
         internal static string[] GetFileListEscaped
             (
             string directoryEscaped,
-            string filespecEscaped
+            string filespecEscaped,
+            bool forceEvaluate = false
             )
         {
-            return GetFileList(directoryEscaped, filespecEscaped, true /* returnEscaped */);
+            return GetFileList(directoryEscaped, filespecEscaped, true /* returnEscaped */, forceEvaluate);
         }
 
         /// <summary>
@@ -73,7 +83,8 @@ namespace Microsoft.Build.Internal
             (
             string directoryEscaped,
             string filespecEscaped,
-            bool returnEscaped
+            bool returnEscaped,
+            bool forceEvaluateWildCards
             )
         {
             ErrorUtilities.VerifyThrowInternalLength(filespecEscaped, "filespecEscaped");
@@ -91,6 +102,11 @@ namespace Microsoft.Build.Internal
                 // happen because '*' is an illegal character to have in a filename.
 
                 // Just return the original string.
+                fileList = new string[] { returnEscaped ? filespecEscaped : EscapingUtilities.UnescapeAll(filespecEscaped) };
+            }
+            else if (s_msbuildEagerWildCardEvaluation && !forceEvaluateWildCards &&
+                     IsRegexMatch(filespecEscaped))
+            {
                 fileList = new string[] { returnEscaped ? filespecEscaped : EscapingUtilities.UnescapeAll(filespecEscaped) };
             }
             else if (!containsEscapedWildcards && containsRealWildcards)
@@ -135,6 +151,30 @@ namespace Microsoft.Build.Internal
             }
 
             return fileList;
+        }
+
+        private static List<Regex> PopulateRegexFromEnvironment()
+        {
+            string wildCards = Environment.GetEnvironmentVariable("MsBuildSkipEagerWildCarddEvaluationRegexes");
+            if (string.IsNullOrEmpty(wildCards))
+            {
+                return new List<Regex>(0);
+            }
+            else
+            {
+                List<Regex> regexes = new List<Regex>();
+                foreach (string regex in wildCards.Split(';'))
+                {
+                    regexes.Add(new Regex(regex, RegexOptions.Compiled | RegexOptions.IgnoreCase));
+                }
+
+                return regexes;
+            }
+        }
+
+        private static bool IsRegexMatch(string fileSpec)
+        {
+            return s_wildCardSupportedRegexes.Any(regex => regex.IsMatch(fileSpec));
         }
     }
 }

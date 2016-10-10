@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Security;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -34,6 +35,11 @@ namespace Microsoft.Build.Shared
                                                   "QTAGENT32", "CONCURRENT", "RESHARPER", "MDHOST", "TE.PROCESSHOST"
                                               };
 
+        private static readonly bool s_cacheFilExistenceFlag =
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MsBuildCacheFileExistence"));
+
+        private static ConcurrentDictionary<string, bool> FileExistenceCache = new ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        
         // This flag, when set, indicates that we are running tests. Initially assume it's true. It also implies that
         // the currentExecutableOverride is set to a path (that is non-null). Assume this is not initialized when we
         // have the impossible combination of runningTests = false and currentExecutableOverride = null.
@@ -787,8 +793,15 @@ namespace Microsoft.Build.Shared
             NativeMethodsShared.WIN32_FILE_ATTRIBUTE_DATA data = new NativeMethodsShared.WIN32_FILE_ATTRIBUTE_DATA();
             bool success = false;
 
-            success = NativeMethodsShared.GetFileAttributesEx(fullPath, 0, ref data);
-
+            if (s_cacheFilExistenceFlag)
+            {
+                success = FileExistenceCache.GetOrAdd(fullPath, (path) => NativeMethodsShared.GetFileAttributesEx(path, 0, ref data));
+            }
+            else
+            {
+                success = NativeMethodsShared.GetFileAttributesEx(fullPath, 0, ref data);
+            }
+            
             return success;
         }
 

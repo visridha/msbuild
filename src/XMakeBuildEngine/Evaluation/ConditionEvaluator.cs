@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
@@ -225,9 +226,22 @@ namespace Microsoft.Build.Evaluation
             }
 
             // Try and see if we have an expression tree for this condition already
-            GenericExpressionNode parsedExpression = (GenericExpressionNode)cachedExpressionTreesForCurrentOptions[condition];
+            var expressionStack = (ConcurrentStack<GenericExpressionNode>)cachedExpressionTreesForCurrentOptions[condition];
+            if (expressionStack == null)
+            {
+                lock (cachedExpressionTreesForCurrentOptions)
+                {
+                    expressionStack = (ConcurrentStack<GenericExpressionNode>)cachedExpressionTreesForCurrentOptions[condition];
+                    if (expressionStack == null)
+                    {
+                        expressionStack = new ConcurrentStack<GenericExpressionNode>();
+                        cachedExpressionTreesForCurrentOptions[condition] = expressionStack;
+                    }
+                }
+            }
 
-            if (parsedExpression == null)
+            GenericExpressionNode parsedExpression;
+            if (!expressionStack.TryPop(out parsedExpression))
             {
                 Parser conditionParser = new Parser();
 
@@ -237,20 +251,8 @@ namespace Microsoft.Build.Evaluation
                 #endregion
 
                 parsedExpression = conditionParser.Parse(condition, options, elementLocation);
-
-                // It's possible two threads will add a different tree to the same entry in the hashtable, 
-                // but it should be rare and it's not a problem - the previous entry will be thrown away.
-                // We could ensure no dupes with double check locking but it's not really necessary here.
-                // Also, we don't want to lock on every read.
-                lock (cachedExpressionTreesForCurrentOptions)
-                {
-                    if (!s_disableExpressionCaching)
-                    {
-                        cachedExpressionTreesForCurrentOptions[condition] = parsedExpression;
-                    }
-                }
             }
-
+            
             bool result;
 
             ConditionEvaluationState<P, I> state = new ConditionEvaluationState<P, I>(condition, expander, expanderOptions, conditionedPropertiesTable, evaluationDirectory, elementLocation, projectRootElementCache);
@@ -266,6 +268,10 @@ namespace Microsoft.Build.Evaluation
                 finally
                 {
                     parsedExpression.ResetState();
+                    if (!s_disableExpressionCaching)
+                    {
+                        expressionStack.Push(parsedExpression);
+                    }
                 }
             }
 

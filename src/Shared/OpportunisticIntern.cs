@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
@@ -65,10 +66,12 @@ namespace Microsoft.Build
         /// </summary>
         private static readonly int s_ginormousThreshhold = AssignViaEnvironment("MSBUILDGINORMOUSINTERNTHRESHOLD", 8000);
 
+        private static readonly bool s_useSimpleConcurrency = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("MsBuildUseSimpleInternConcurrency"));
+
         /// <summary>
         /// Manages the separate MRU lists.
         /// </summary>
-        private static BucketedPrioritizedStringList s_si = new BucketedPrioritizedStringList(/*gatherStatistics*/ false, s_smallMruSize, s_largeMruSize, s_hugeMruSize, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold);
+        private static BucketedPrioritizedStringList s_si = new BucketedPrioritizedStringList(/*gatherStatistics*/ false, s_smallMruSize, s_largeMruSize, s_hugeMruSize, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold, s_useSimpleConcurrency);
 
         #region Statistics
         /// <summary>
@@ -152,11 +155,11 @@ namespace Microsoft.Build
         internal static void EnableStatisticsGathering()
         {
             // Statistics include several 'what if' scenarios such as doubling the size of the MRU lists.
-            s_si = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, s_smallMruSize, s_largeMruSize, s_hugeMruSize, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold);
-            s_whatIfInfinite = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, Int32.MaxValue, Int32.MaxValue, Int32.MaxValue, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold);
-            s_whatIfDoubled = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, s_smallMruSize * 2, s_largeMruSize * 2, s_hugeMruSize * 2, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold);
-            s_whatIfHalved = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, s_smallMruSize / 2, s_largeMruSize / 2, s_hugeMruSize / 2, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold);
-            s_whatIfZero = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, 0, 0, 0, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold);
+            s_si = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, s_smallMruSize, s_largeMruSize, s_hugeMruSize, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold, s_useSimpleConcurrency);
+            s_whatIfInfinite = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, Int32.MaxValue, Int32.MaxValue, Int32.MaxValue, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold, s_useSimpleConcurrency);
+            s_whatIfDoubled = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, s_smallMruSize * 2, s_largeMruSize * 2, s_hugeMruSize * 2, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold, s_useSimpleConcurrency);
+            s_whatIfHalved = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, s_smallMruSize / 2, s_largeMruSize / 2, s_hugeMruSize / 2, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold, s_useSimpleConcurrency);
+            s_whatIfZero = new BucketedPrioritizedStringList(/*gatherStatistics*/ true, 0, 0, 0, s_smallMruThreshhold, s_largeMruThreshhold, s_hugeMruThreshhold, s_ginormousThreshhold, s_useSimpleConcurrency);
         }
 
         /// <summary>
@@ -558,6 +561,10 @@ namespace Microsoft.Build
             /// </summary>
             private int _ginormousThreshhold;
 
+            private bool _useSimpleInternConcurrency;
+
+            private ConcurrentDictionary<string, string> _internedStrings = new ConcurrentDictionary<string, string>(StringComparer.Ordinal);
+
             #region Statistics
             /// <summary>
             /// Whether or not to gather statistics
@@ -636,7 +643,7 @@ namespace Microsoft.Build
             /// <summary>
             /// Construct.
             /// </summary>
-            internal BucketedPrioritizedStringList(bool gatherStatistics, int smallMruSize, int largeMruSize, int hugeMruSize, int smallMruThreshhold, int largeMruThreshhold, int hugeMruThreshhold, int ginormousThreshhold)
+            internal BucketedPrioritizedStringList(bool gatherStatistics, int smallMruSize, int largeMruSize, int hugeMruSize, int smallMruThreshhold, int largeMruThreshhold, int hugeMruThreshhold, int ginormousThreshhold, bool useSimpleInternConcurrency)
             {
                 if (smallMruSize == 0 && largeMruSize == 0 && hugeMruSize == 0)
                 {
@@ -650,6 +657,7 @@ namespace Microsoft.Build
                 _largeMruThreshhold = largeMruThreshhold;
                 _hugeMruThreshhold = hugeMruThreshhold;
                 _ginormousThreshhold = ginormousThreshhold;
+                _useSimpleInternConcurrency = useSimpleInternConcurrency;
 
                 for (int i = 0; i < _ginormousSize; i++)
                 {
@@ -934,6 +942,11 @@ namespace Microsoft.Build
 
                             return false;
                         }
+                    }
+                    else if (_useSimpleInternConcurrency)
+                    {
+                        interned = _internedStrings.GetOrAdd(candidate.ExpensiveConvertToString(), candidate2 => candidate2);
+                        return true;
                     }
                     else if (length >= _hugeMruThreshhold)
                     {

@@ -2041,7 +2041,7 @@ namespace Microsoft.Build.Evaluation
                 }
 
                 // Expand the wildcards and provide an alphabetical order list of import statements.
-                importFilesEscaped = EngineFileUtilities.GetFileListEscaped(directoryOfImportingFile, importExpressionEscaped);
+                importFilesEscaped = EngineFileUtilities.GetFileListEscaped(directoryOfImportingFile, importExpressionEscaped, forceEvaluate: true);
             }
             catch (Exception ex) // Catching Exception, but rethrowing unless it's an IO related exception.
             {

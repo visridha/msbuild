@@ -24,6 +24,7 @@ using TaskItem = Microsoft.Build.Execution.ProjectItemInstance.TaskItem;
 using TaskItemFactory = Microsoft.Build.Execution.ProjectItemInstance.TaskItem.TaskItemFactory;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Build.Internal;
 
 namespace Microsoft.Build.Evaluation
 {
@@ -1914,7 +1915,22 @@ namespace Microsoft.Build.Evaluation
                     // iterate over the items, and yield out items in the tuple format
                     foreach (S item in itemsOfType)
                     {
-                        yield return new Tuple<string, S>(item.EvaluatedIncludeEscaped, item);
+                        if (EngineFileUtilities.s_msbuildEagerWildCardEvaluation)
+                        {
+                            foreach (
+                                string resultantItem in
+                                    EngineFileUtilities.GetFileListEscaped(
+                                        item.ProjectDirectory,
+                                        item.EvaluatedIncludeEscaped,
+                                        forceEvaluate: true))
+                            {
+                                yield return new Tuple<string, S>(resultantItem, item);
+                            }
+                        }
+                        else
+                        {
+                            yield return new Tuple<string, S>(item.EvaluatedIncludeEscaped, item);
+                        }
                     }
                 }
 

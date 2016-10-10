@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
 using System.Diagnostics;
@@ -30,6 +31,12 @@ namespace Microsoft.Build.Shared
         internal static readonly char[] directorySeparatorCharacters = { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
         private static readonly GetFileSystemEntries s_defaultGetFileSystemEntries = new GetFileSystemEntries(GetAccessibleFileSystemEntries);
         private static readonly DirectoryExists s_defaultDirectoryExists = new DirectoryExists(Directory.Exists);
+
+        private static readonly ConcurrentDictionary<string, string[]> s_cachedFileEnumerations = new ConcurrentDictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, object> s_cachedFileEnumerationsLock = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly bool s_cacheFileEnumerationsFlag =
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MsBuildCacheFileEnumerations"));
 
         /// <summary>
         /// Cache of the list of invalid path characters, because this method returns a clone (for security reasons)
@@ -1132,8 +1139,43 @@ namespace Microsoft.Build.Shared
             string filespecUnescaped
         )
         {
-            string[] files = GetFiles(projectDirectoryUnescaped, filespecUnescaped, s_defaultGetFileSystemEntries, s_defaultDirectoryExists);
-            return files;
+            if (s_cacheFileEnumerationsFlag)
+            {
+                string filesKey = $"{projectDirectoryUnescaped}{filespecUnescaped}";
+                string[] files;
+                if (!s_cachedFileEnumerations.TryGetValue(filesKey, out files))
+                {
+                    object locks = s_cachedFileEnumerationsLock.GetOrAdd(filesKey, _ => new object());
+                    lock (locks)
+                    {
+                        if (!s_cachedFileEnumerations.TryGetValue(filesKey, out files))
+                        {
+                            files =
+                                s_cachedFileEnumerations.GetOrAdd(
+                                    filesKey,
+                                    (_) =>
+                                        GetFiles(
+                                            projectDirectoryUnescaped,
+                                            filespecUnescaped,
+                                            s_defaultGetFileSystemEntries,
+                                            s_defaultDirectoryExists));
+                        }
+                    }
+                }
+
+                var filesToReturn = new string[files.Length];
+                Array.Copy(files, filesToReturn, files.Length);
+                return filesToReturn;
+            }
+            else
+            {
+                string[] files = GetFiles(
+                    projectDirectoryUnescaped,
+                    filespecUnescaped,
+                    s_defaultGetFileSystemEntries,
+                    s_defaultDirectoryExists);
+                return files;
+            }
         }
 
         /// <summary>
