@@ -165,7 +165,7 @@ namespace Microsoft.Build.Internal
                 List<Regex> regexes = new List<Regex>();
                 foreach (string regex in wildCards.Split(';'))
                 {
-                    regexes.Add(new Regex(regex, RegexOptions.Compiled | RegexOptions.IgnoreCase));
+                    regexes.Add(new Regex(regex, RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.IgnoreCase));
                 }
 
                 return regexes;
