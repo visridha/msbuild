@@ -200,7 +200,7 @@ namespace Microsoft.Build.Evaluation
             lock (_locker)
             {
                 _weakCache.TryGetValue(projectFile, out projectRootElement);
-            }
+            
                 if (projectRootElement != null && _autoReloadFromDisk)
                 {
                     FileInfo fileInfo = FileUtilities.GetFileInfoNoThrow(projectFile);
@@ -254,11 +254,19 @@ namespace Microsoft.Build.Evaluation
                         }
                     }
                 }
+            }
 
-                if (projectRootElement == null && openProjectRootElement != null)
-                {
-                    projectRootElement = openProjectRootElement(projectFile, this);
+            // do the expensive I/O outside the lock.
+            bool initialProjectElementCheck = projectRootElement == null && openProjectRootElement != null;
+            if (initialProjectElementCheck)
+            {
+                projectRootElement = openProjectRootElement(projectFile, this);
+            }
 
+            lock (_locker)
+            {
+                if (initialProjectElementCheck)
+                { 
                     ErrorUtilities.VerifyThrowInternalNull(projectRootElement, "projectRootElement");
                     ErrorUtilities.VerifyThrow(projectRootElement.FullPath == projectFile, "Got project back with incorrect path");
                     ErrorUtilities.VerifyThrow(_weakCache.Contains(projectFile), "Open should have renamed into cache and boosted");
@@ -266,10 +274,7 @@ namespace Microsoft.Build.Evaluation
                 else if (projectRootElement != null)
                 {
                     DebugTraceCache("Satisfied from XML cache: ", projectFile);
-                    lock (_locker)
-                    {
-                        BoostEntryInStrongCache(projectRootElement);
-                    }
+                    BoostEntryInStrongCache(projectRootElement);
                 }
 
                 // An implicit load will never reset the explicit flag.
@@ -277,8 +282,9 @@ namespace Microsoft.Build.Evaluation
                 {
                     projectRootElement.MarkAsExplicitlyLoaded();
                 }
+            }
 
-                return projectRootElement;
+            return projectRootElement;
         }
 
         /// <summary>

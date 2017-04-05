@@ -7,6 +7,7 @@
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Xml;
 using Microsoft.Build.Internal;
 using Microsoft.Build.Shared;
@@ -32,7 +33,7 @@ namespace Microsoft.Build.Construction
         /// <summary>
         /// Used to cache tag names in loaded files.
         /// </summary>
-        private static NameTable s_nameTable = new XmlNameTableThreadSafe();
+        private static ThreadLocal<NameTable> s_nameTable = new ThreadLocal<NameTable>(() => new XmlNameTableThreadSafe());
 
         /// <summary>
         /// Whether we can selectively load as read-only (eg just when in program files directory)
@@ -65,7 +66,7 @@ namespace Microsoft.Build.Construction
         /// Constructor
         /// </summary>
         internal XmlDocumentWithLocation()
-            : base(s_nameTable)
+            : base(s_nameTable.Value)
         {
         }
 
