@@ -196,11 +196,11 @@ namespace Microsoft.Build.Evaluation
             // Should already have been canonicalized
             ErrorUtilities.VerifyThrowInternalRooted(projectFile);
 
+            ProjectRootElement projectRootElement;
             lock (_locker)
             {
-                ProjectRootElement projectRootElement;
                 _weakCache.TryGetValue(projectFile, out projectRootElement);
-
+            }
                 if (projectRootElement != null && _autoReloadFromDisk)
                 {
                     FileInfo fileInfo = FileUtilities.GetFileInfoNoThrow(projectFile);
@@ -244,7 +244,10 @@ namespace Microsoft.Build.Evaluation
 
                         if (forgetEntry)
                         {
-                            ForgetEntry(projectRootElement);
+                            lock (_locker)
+                            {
+                                ForgetEntry(projectRootElement);
+                            }
 
                             DebugTraceCache("Out of date dropped from XML cache: ", projectFile);
                             projectRootElement = null;
@@ -263,7 +266,10 @@ namespace Microsoft.Build.Evaluation
                 else if (projectRootElement != null)
                 {
                     DebugTraceCache("Satisfied from XML cache: ", projectFile);
-                    BoostEntryInStrongCache(projectRootElement);
+                    lock (_locker)
+                    {
+                        BoostEntryInStrongCache(projectRootElement);
+                    }
                 }
 
                 // An implicit load will never reset the explicit flag.
@@ -273,7 +279,6 @@ namespace Microsoft.Build.Evaluation
                 }
 
                 return projectRootElement;
-            }
         }
 
         /// <summary>
