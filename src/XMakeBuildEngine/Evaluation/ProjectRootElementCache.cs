@@ -250,17 +250,14 @@ namespace Microsoft.Build.Evaluation
                         }
                     }
                 }
-            }
 
-            // do the expensive I/O outside the lock.
-            bool initialProjectElementCheck = projectRootElement == null && openProjectRootElement != null;
-            if (initialProjectElementCheck)
-            {
-                projectRootElement = openProjectRootElement(projectFile, this);
-            }
-
-            lock (_locker)
-            {
+                // do the expensive I/O outside the lock.
+                bool initialProjectElementCheck = projectRootElement == null && openProjectRootElement != null;
+                if (initialProjectElementCheck)
+                {
+                    projectRootElement = openProjectRootElement(projectFile, this);
+                }
+            
                 if (initialProjectElementCheck)
                 { 
                     ErrorUtilities.VerifyThrowInternalNull(projectRootElement, "projectRootElement");
