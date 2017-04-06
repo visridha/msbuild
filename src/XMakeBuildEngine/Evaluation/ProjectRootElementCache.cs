@@ -244,11 +244,7 @@ namespace Microsoft.Build.Evaluation
 
                         if (forgetEntry)
                         {
-                            lock (_locker)
-                            {
-                                ForgetEntry(projectRootElement);
-                            }
-
+                            ForgetEntry(projectRootElement);
                             DebugTraceCache("Out of date dropped from XML cache: ", projectFile);
                             projectRootElement = null;
                         }

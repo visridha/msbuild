@@ -269,7 +269,7 @@ namespace Microsoft.Build.Internal
                 {
                     if (s_availableStaticMethods == null)
                     {
-                        s_availableStaticMethods = new ConcurrentDictionary<string, Tuple<string, Type>>(StringComparer.OrdinalIgnoreCase);
+                        var availableStaticMethods = new ConcurrentDictionary<string, Tuple<string, Type>>(StringComparer.OrdinalIgnoreCase);
 
                         // Pre declare our common type Tuples
                         Tuple<string, Type> environmentType = new Tuple<string, Type>(null, typeof(System.Environment));
@@ -277,82 +277,84 @@ namespace Microsoft.Build.Internal
                         Tuple<string, Type> fileType = new Tuple<string, Type>(null, typeof(System.IO.File));
 
                         // Make specific static methods available (Assembly qualified type names are *NOT* supported, only null which means mscorlib):
-                        s_availableStaticMethods.TryAdd("System.Environment::ExpandEnvironmentVariables", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::GetEnvironmentVariable", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::GetEnvironmentVariables", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::GetFolderPath", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::GetLogicalDrives", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::ExpandEnvironmentVariables", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::GetEnvironmentVariable", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::GetEnvironmentVariables", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::GetFolderPath", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::GetLogicalDrives", environmentType);
 
                         // All the following properties only have getters
-                        s_availableStaticMethods.TryAdd("System.Environment::CommandLine", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::Is64BitOperatingSystem", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::Is64BitProcess", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::MachineName", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::OSVersion", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::ProcessorCount", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::StackTrace", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::SystemDirectory", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::SystemPageSize", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::TickCount", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::UserDomainName", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::UserInteractive", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::UserName", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::Version", environmentType);
-                        s_availableStaticMethods.TryAdd("System.Environment::WorkingSet", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::CommandLine", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::Is64BitOperatingSystem", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::Is64BitProcess", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::MachineName", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::OSVersion", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::ProcessorCount", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::StackTrace", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::SystemDirectory", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::SystemPageSize", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::TickCount", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::UserDomainName", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::UserInteractive", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::UserName", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::Version", environmentType);
+                        availableStaticMethods.TryAdd("System.Environment::WorkingSet", environmentType);
 
-                        s_availableStaticMethods.TryAdd("System.IO.Directory::GetDirectories", directoryType);
-                        s_availableStaticMethods.TryAdd("System.IO.Directory::GetFiles", directoryType);
-                        s_availableStaticMethods.TryAdd("System.IO.Directory::GetLastAccessTime", directoryType);
-                        s_availableStaticMethods.TryAdd("System.IO.Directory::GetLastWriteTime", directoryType);
-                        s_availableStaticMethods.TryAdd("System.IO.Directory::GetParent", directoryType);
-                        s_availableStaticMethods.TryAdd("System.IO.File::Exists", fileType);
-                        s_availableStaticMethods.TryAdd("System.IO.File::GetCreationTime", fileType);
-                        s_availableStaticMethods.TryAdd("System.IO.File::GetAttributes", fileType);
-                        s_availableStaticMethods.TryAdd("System.IO.File::GetLastAccessTime", fileType);
-                        s_availableStaticMethods.TryAdd("System.IO.File::GetLastWriteTime", fileType);
-                        s_availableStaticMethods.TryAdd("System.IO.File::ReadAllText", fileType);
+                        availableStaticMethods.TryAdd("System.IO.Directory::GetDirectories", directoryType);
+                        availableStaticMethods.TryAdd("System.IO.Directory::GetFiles", directoryType);
+                        availableStaticMethods.TryAdd("System.IO.Directory::GetLastAccessTime", directoryType);
+                        availableStaticMethods.TryAdd("System.IO.Directory::GetLastWriteTime", directoryType);
+                        availableStaticMethods.TryAdd("System.IO.Directory::GetParent", directoryType);
+                        availableStaticMethods.TryAdd("System.IO.File::Exists", fileType);
+                        availableStaticMethods.TryAdd("System.IO.File::GetCreationTime", fileType);
+                        availableStaticMethods.TryAdd("System.IO.File::GetAttributes", fileType);
+                        availableStaticMethods.TryAdd("System.IO.File::GetLastAccessTime", fileType);
+                        availableStaticMethods.TryAdd("System.IO.File::GetLastWriteTime", fileType);
+                        availableStaticMethods.TryAdd("System.IO.File::ReadAllText", fileType);
 
-                        s_availableStaticMethods.TryAdd(
+                        availableStaticMethods.TryAdd(
                             "System.Globalization.CultureInfo::GetCultureInfo",
                             new Tuple<string, Type>(null, typeof(System.Globalization.CultureInfo))); // user request
-                        s_availableStaticMethods.TryAdd(
+                        availableStaticMethods.TryAdd(
                             "System.Globalization.CultureInfo::CurrentUICulture",
                             new Tuple<string, Type>(null, typeof(System.Globalization.CultureInfo))); // user request
 
                         // All static methods of the following are available (Assembly qualified type names are supported):
-                        s_availableStaticMethods.TryAdd("MSBuild", new Tuple<string, Type>(null, typeof(Microsoft.Build.Evaluation.IntrinsicFunctions)));
-                        s_availableStaticMethods.TryAdd("System.Byte", new Tuple<string, Type>(null, typeof(System.Byte)));
-                        s_availableStaticMethods.TryAdd("System.Char", new Tuple<string, Type>(null, typeof(System.Char)));
-                        s_availableStaticMethods.TryAdd("System.Convert", new Tuple<string, Type>(null, typeof(System.Convert)));
-                        s_availableStaticMethods.TryAdd("System.DateTime", new Tuple<string, Type>(null, typeof(System.DateTime)));
-                        s_availableStaticMethods.TryAdd("System.Decimal", new Tuple<string, Type>(null, typeof(System.Decimal)));
-                        s_availableStaticMethods.TryAdd("System.Double", new Tuple<string, Type>(null, typeof(System.Double)));
-                        s_availableStaticMethods.TryAdd("System.Enum", new Tuple<string, Type>(null, typeof(System.Enum)));
-                        s_availableStaticMethods.TryAdd("System.Guid", new Tuple<string, Type>(null, typeof(System.Guid)));
-                        s_availableStaticMethods.TryAdd("System.Int16", new Tuple<string, Type>(null, typeof(System.Int16)));
-                        s_availableStaticMethods.TryAdd("System.Int32", new Tuple<string, Type>(null, typeof(System.Int32)));
-                        s_availableStaticMethods.TryAdd("System.Int64", new Tuple<string, Type>(null, typeof(System.Int64)));
-                        s_availableStaticMethods.TryAdd("System.IO.Path", new Tuple<string, Type>(null, typeof(System.IO.Path)));
-                        s_availableStaticMethods.TryAdd("System.Math", new Tuple<string, Type>(null, typeof(System.Math)));
-                        s_availableStaticMethods.TryAdd("System.UInt16", new Tuple<string, Type>(null, typeof(System.UInt16)));
-                        s_availableStaticMethods.TryAdd("System.UInt32", new Tuple<string, Type>(null, typeof(System.UInt32)));
-                        s_availableStaticMethods.TryAdd("System.UInt64", new Tuple<string, Type>(null, typeof(System.UInt64)));
-                        s_availableStaticMethods.TryAdd("System.SByte", new Tuple<string, Type>(null, typeof(System.SByte)));
-                        s_availableStaticMethods.TryAdd("System.Single", new Tuple<string, Type>(null, typeof(System.Single)));
-                        s_availableStaticMethods.TryAdd("System.String", new Tuple<string, Type>(null, typeof(System.String)));
-                        s_availableStaticMethods.TryAdd("System.StringComparer", new Tuple<string, Type>(null, typeof(System.StringComparer)));
-                        s_availableStaticMethods.TryAdd("System.TimeSpan", new Tuple<string, Type>(null, typeof(System.TimeSpan)));
-                        s_availableStaticMethods.TryAdd(
+                        availableStaticMethods.TryAdd("MSBuild", new Tuple<string, Type>(null, typeof(Microsoft.Build.Evaluation.IntrinsicFunctions)));
+                        availableStaticMethods.TryAdd("System.Byte", new Tuple<string, Type>(null, typeof(System.Byte)));
+                        availableStaticMethods.TryAdd("System.Char", new Tuple<string, Type>(null, typeof(System.Char)));
+                        availableStaticMethods.TryAdd("System.Convert", new Tuple<string, Type>(null, typeof(System.Convert)));
+                        availableStaticMethods.TryAdd("System.DateTime", new Tuple<string, Type>(null, typeof(System.DateTime)));
+                        availableStaticMethods.TryAdd("System.Decimal", new Tuple<string, Type>(null, typeof(System.Decimal)));
+                        availableStaticMethods.TryAdd("System.Double", new Tuple<string, Type>(null, typeof(System.Double)));
+                        availableStaticMethods.TryAdd("System.Enum", new Tuple<string, Type>(null, typeof(System.Enum)));
+                        availableStaticMethods.TryAdd("System.Guid", new Tuple<string, Type>(null, typeof(System.Guid)));
+                        availableStaticMethods.TryAdd("System.Int16", new Tuple<string, Type>(null, typeof(System.Int16)));
+                        availableStaticMethods.TryAdd("System.Int32", new Tuple<string, Type>(null, typeof(System.Int32)));
+                        availableStaticMethods.TryAdd("System.Int64", new Tuple<string, Type>(null, typeof(System.Int64)));
+                        availableStaticMethods.TryAdd("System.IO.Path", new Tuple<string, Type>(null, typeof(System.IO.Path)));
+                        availableStaticMethods.TryAdd("System.Math", new Tuple<string, Type>(null, typeof(System.Math)));
+                        availableStaticMethods.TryAdd("System.UInt16", new Tuple<string, Type>(null, typeof(System.UInt16)));
+                        availableStaticMethods.TryAdd("System.UInt32", new Tuple<string, Type>(null, typeof(System.UInt32)));
+                        availableStaticMethods.TryAdd("System.UInt64", new Tuple<string, Type>(null, typeof(System.UInt64)));
+                        availableStaticMethods.TryAdd("System.SByte", new Tuple<string, Type>(null, typeof(System.SByte)));
+                        availableStaticMethods.TryAdd("System.Single", new Tuple<string, Type>(null, typeof(System.Single)));
+                        availableStaticMethods.TryAdd("System.String", new Tuple<string, Type>(null, typeof(System.String)));
+                        availableStaticMethods.TryAdd("System.StringComparer", new Tuple<string, Type>(null, typeof(System.StringComparer)));
+                        availableStaticMethods.TryAdd("System.TimeSpan", new Tuple<string, Type>(null, typeof(System.TimeSpan)));
+                        availableStaticMethods.TryAdd(
                             "System.Text.RegularExpressions.Regex",
                             new Tuple<string, Type>(null, typeof(System.Text.RegularExpressions.Regex)));
-                        s_availableStaticMethods.TryAdd("System.UriBuilder", new Tuple<string, Type>(null, typeof(System.UriBuilder)));
-                        s_availableStaticMethods.TryAdd("System.Version", new Tuple<string, Type>(null, typeof(System.Version)));
-                        s_availableStaticMethods.TryAdd(
+                        availableStaticMethods.TryAdd("System.UriBuilder", new Tuple<string, Type>(null, typeof(System.UriBuilder)));
+                        availableStaticMethods.TryAdd("System.Version", new Tuple<string, Type>(null, typeof(System.Version)));
+                        availableStaticMethods.TryAdd(
                             "Microsoft.Build.Utilities.ToolLocationHelper",
                             new Tuple<string, Type>(
                                 "Microsoft.Build.Utilities.ToolLocationHelper, Microsoft.Build.Utilities.Core, Version=" +
                                 MSBuildConstants.CurrentAssemblyVersion + ", Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
                                 null));
+
+                        s_availableStaticMethods = availableStaticMethods;
                     }
                 }
             }
